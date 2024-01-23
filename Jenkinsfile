@@ -11,10 +11,6 @@ pipeline {
       LAST_COMMIT = ""
       TODAY= java.time.LocalDate.now()
     }
-    tools {
-        maven 'Maven 3.5.1'
-        jdk 'jdk8'
-    }
 
     stages {
       stage('[Dev] Jenkins variable setting'){
