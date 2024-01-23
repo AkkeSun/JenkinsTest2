@@ -6,7 +6,7 @@ pipeline {
 
       DEV_JAR_NAME = 'JenkinsTest-dev.jar'
       DEV_SERVER_JAR_PATH = '/home/od'
-      DEV_JENKINS_SERVER_JAR = '/var/lib/jenkins/workspace/JenkinsTest_dev/build/libs/JenkinsTest-dev.jar'
+      DEV_JENKINS_SERVER_JAR = '/var/lib/jenkins/workspace/JenkinsTest2_dev/target/JenkinsTest-dev.jar'
 
       LAST_COMMIT = ""
       TODAY= java.time.LocalDate.now()
