@@ -44,7 +44,7 @@ pipeline {
           branch 'dev'
         }
         steps {
-          withMaven() {
+          withMaven {
             sh 'mvn clean package -P dev'
           }
         }
