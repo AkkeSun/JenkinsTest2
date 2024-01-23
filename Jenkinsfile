@@ -48,9 +48,7 @@ pipeline {
           branch 'dev'
         }
         steps {
-
-            sh 'mvn clean package -P dev'
-
+            sh './mvnw clean package -P dev'
         }
       }
     }
