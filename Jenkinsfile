@@ -47,6 +47,43 @@ pipeline {
             sh './mvnw clean package -P dev'
         }
       }
+
+      stage ('[Dev] Replace Jar') {
+        when {
+          branch 'dev'
+        }
+        steps {
+          script {
+            def remote = setRemote(host, username, password)
+
+            // ------ use SSH pipeline steps plugin
+            // make backup jar
+            sshCommand remote: remote, command: "cp ${DEV_SERVER_JAR_PATH}/${DEV_JAR_NAME} ${DEV_SERVER_JAR_PATH}/${DEV_JAR_NAME}_${TODAY}.jar"
+
+            // send new jar (Jenkins server -> service server)
+            sshPut remote: remote, from: env.DEV_JENKINS_SERVER_JAR, into: env.DEV_SERVER_JAR_PATH
+          }
+        }
+      }
+
+      stage('[Dev] Service restart'){
+        when {
+          branch 'dev'
+        }
+        steps {
+          script {
+            def remote = setRemote(host, username, password)
+
+            sshCommand remote: remote, command: "cd ${DEV_SERVER_JAR_PATH} && ./service.sh stop"
+            healthCheck(host, port, "stop", 2)
+
+            sshCommand remote: remote, command: "cd ${DEV_SERVER_JAR_PATH} && ./service.sh start"
+            healthCheck(host, port, "start", 5)
+
+            // sshCommand remote: remote, command: "cd ${SERVER_JAR_PATH} && echo '${sweetPassword}' | su sweet -c '${SERVER_JAR_PATH}/service.sh stop'"
+          }
+        }
+      }
     }
 
     // ------ use Slack Notification plugin
