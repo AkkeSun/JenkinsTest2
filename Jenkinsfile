@@ -34,9 +34,10 @@ pipeline {
               LAST_COMMIT = sh(returnStdout: true, script: "git log -1 --pretty=%B").trim()
 
               echo '[host] ' + host
-              echo '[dockerImg] ' + dockerImg
               echo '[username] ' + username
               echo '[password] ' + password
+              echo '[dockerUsername] ' + dockerUsername
+              echo '[dockerPassword] ' + dockerPassword
               echo '[last commit] ' + LAST_COMMIT
           }
         }
