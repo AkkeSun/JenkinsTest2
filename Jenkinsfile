@@ -3,10 +3,11 @@ pipeline {
 
     // environment variable setting
     environment {
+      JENKINS_SERVER_JAR = '/var/lib/jenkins/workspace/JenkinsTest2_dev/target/JenkinsTest.jar'
 
-      DEV_JAR_NAME = 'JenkinsTest-dev.jar'
-      DEV_SERVER_JAR_PATH = '/home/od'
-      DEV_JENKINS_SERVER_JAR = '/var/lib/jenkins/workspace/JenkinsTest2_dev/target/JenkinsTest-dev.jar'
+      DEV_SERVER_PORT = '8080'
+      DOCKER_IMAGE_NAME = 'akkessun/jenkins-test'
+      DOCKER_CONTAINER_NAME = 'jenkinsTest'
 
       LAST_COMMIT = ""
       TODAY= java.time.LocalDate.now()
@@ -23,15 +24,17 @@ pipeline {
               // Jenkins variable setting
               wrap([$class: 'ParentFolderBuildWrapper']) {
                   host = "${env.DEV_HOST}"
-                  port = "${env.DEV_PORT}"
                   username = "${env.DEV_USERNAME}"
                   password = "${env.DEV_PASSWORD}"
+                  dockerUsername = "${env.DOCKER_USERNAME}"
+                  dockerPassword = "${env.DOCKER_PASSWORD}"
               }
 
               // git last commit setting (for Slack Notification)
               LAST_COMMIT = sh(returnStdout: true, script: "git log -1 --pretty=%B").trim()
 
-              echo '[host] ' + host + ':' + port
+              echo '[host] ' + host
+              echo '[dockerImg] ' + dockerImg
               echo '[username] ' + username
               echo '[password] ' + password
               echo '[last commit] ' + LAST_COMMIT
@@ -44,11 +47,27 @@ pipeline {
           branch 'dev'
         }
         steps {
-            sh './mvnw clean package -P dev'
+            script {
+                sh './mvnw clean package -P dev'
+                sh "docker build -t ${env.DOCKER_IMAGE_NAME} ."
+            }
         }
       }
 
-      stage ('[Dev] Replace Jar') {
+      stage('[Dev] Push to Docker Hub'){
+        when {
+          branch 'dev'
+        }
+        steps {
+            script {
+                sh "docker login -u ${dockerUsername} -p ${dockerPassword}"
+                sh "docker push ${DOCKER_IMAGE_NAME}"
+                sh "docker logout"
+            }
+        }
+      }
+
+      stage ('[Dev] Deploy to Server') {
         when {
           branch 'dev'
         }
@@ -57,30 +76,16 @@ pipeline {
             def remote = setRemote(host, username, password)
 
             // ------ use SSH pipeline steps plugin
-            // make backup jar
-            sshCommand remote: remote, command: "cp ${DEV_SERVER_JAR_PATH}/${DEV_JAR_NAME} ${DEV_SERVER_JAR_PATH}/${DEV_JAR_NAME}_${TODAY}.jar"
+            sshCommand remote: remote, command: "docker login -u ${dockerUsername} -p ${dockerPassword}"
+            sshCommand remote: remote, command: "docker pull ${DOCKER_IMAGE_NAME}"
 
-            // send new jar (Jenkins server -> service server)
-            sshPut remote: remote, from: env.DEV_JENKINS_SERVER_JAR, into: env.DEV_SERVER_JAR_PATH
-          }
-        }
-      }
+            sshCommand remote: remote, command: "docker stop ${DOCKER_CONTAINER_NAME}"
+            healthCheck(host, port, "stop", 1)
 
-      stage('[Dev] Service restart'){
-        when {
-          branch 'dev'
-        }
-        steps {
-          script {
-            def remote = setRemote(host, username, password)
-
-            sshCommand remote: remote, command: "cd ${DEV_SERVER_JAR_PATH} && ./service.sh stop"
-            healthCheck(host, port, "stop", 2)
-
-            sshCommand remote: remote, command: "cd ${DEV_SERVER_JAR_PATH} && ./service.sh start"
+            sshCommand remote: remote, command: "docker run -it -p ${DEV_SERVER_PORT}:8080 --name ${DOCKER_CONTAINER_NAME} -d ${DOCKER_IMAGE_NAME}"
             healthCheck(host, port, "start", 5)
 
-            // sshCommand remote: remote, command: "cd ${SERVER_JAR_PATH} && echo '${sweetPassword}' | su sweet -c '${SERVER_JAR_PATH}/service.sh stop'"
+            sshCommand remote: remote, command: "docker logout"
           }
         }
       }
