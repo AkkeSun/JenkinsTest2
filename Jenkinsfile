@@ -84,8 +84,9 @@ pipeline {
             sshCommand remote: remote, command: "docker pull ${DOCKER_IMAGE_NAME}:${TODAY}"
 
             sshCommand remote: remote, command: "docker stop ${DOCKER_CONTAINER_NAME}"
-            healthCheck(host, DEV_SERVER_PORT, "stop", 3)
+            healthCheck(host, DEV_SERVER_PORT, "stop", 1)
 
+            sshCommand remote: remote, command: "docker rm ${DOCKER_CONTAINER_NAME}"
             sshCommand remote: remote, command: "docker run -it -p ${DEV_SERVER_PORT}:8080 --name ${DOCKER_CONTAINER_NAME} -d ${DOCKER_IMAGE_NAME}:${TODAY}"
             healthCheck(host, DEV_SERVER_PORT, "start", 5)
 
