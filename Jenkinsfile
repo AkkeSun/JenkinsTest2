@@ -50,7 +50,10 @@ pipeline {
         steps {
             script {
                 sh './mvnw clean package -P dev'
-                sh "docker build -t ${env.DOCKER_IMAGE_NAME} ."
+                // sudo usermod -aG docker jenkins
+                // sudo chown jenkins:docker /var/run/docker.sock
+                // sudo chmod 660 /var/run/docker.sock
+                sh "docker build -t ${env.DOCKER_IMAGE_NAME}:${TODAY} ."
             }
         }
       }
@@ -62,7 +65,7 @@ pipeline {
         steps {
             script {
                 sh "docker login -u ${dockerUsername} -p ${dockerPassword}"
-                sh "docker push ${DOCKER_IMAGE_NAME}"
+                sh "docker push ${DOCKER_IMAGE_NAME}:${TODAY}"
                 sh "docker logout"
             }
         }
@@ -78,12 +81,12 @@ pipeline {
 
             // ------ use SSH pipeline steps plugin
             sshCommand remote: remote, command: "docker login -u ${dockerUsername} -p ${dockerPassword}"
-            sshCommand remote: remote, command: "docker pull ${DOCKER_IMAGE_NAME}"
+            sshCommand remote: remote, command: "docker pull ${DOCKER_IMAGE_NAME}:${TODAY}"
 
             sshCommand remote: remote, command: "docker stop ${DOCKER_CONTAINER_NAME}"
-            healthCheck(host, port, "stop", 1)
+            healthCheck(host, port, "stop", 3)
 
-            sshCommand remote: remote, command: "docker run -it -p ${DEV_SERVER_PORT}:8080 --name ${DOCKER_CONTAINER_NAME} -d ${DOCKER_IMAGE_NAME}"
+            sshCommand remote: remote, command: "docker run -it -p ${DEV_SERVER_PORT}:8080 --name ${DOCKER_CONTAINER_NAME} -d ${DOCKER_IMAGE_NAME}:${TODAY}"
             healthCheck(host, port, "start", 5)
 
             sshCommand remote: remote, command: "docker logout"
