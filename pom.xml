@@ -42,7 +42,7 @@
         <version>3.5.1</version>
       </plugin>
     </plugins>
-    <finalName>JenkinsTest-${deployment}</finalName>
+    <finalName>JenkinsTest</finalName>
     <resources>
       <resource>
         <directory>src/main/resources/${deployment}</directory>
